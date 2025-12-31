@@ -1,4 +1,6 @@
 import streamlit as st
+st.write("🔥 NEW VERSION OF APP IS RUNNING")
+import streamlit as st
 import pandas as pd
 import joblib
 import numpy as np
