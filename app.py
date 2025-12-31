@@ -1,6 +1,4 @@
 import streamlit as st
-st.write("🔥 NEW VERSION OF APP IS RUNNING")
-import streamlit as st
 import pandas as pd
 import joblib
 import numpy as np
@@ -71,7 +69,7 @@ st.title("📈 Bitcoin Price Prediction Dashboard")
 # Sidebar
 st.sidebar.header("User Controls")
 forecast_days = st.sidebar.slider(
-    "Kitne din ka forecast chahiye?",
+    "Select number of days to forecast",
     min_value=7,
     max_value=60,
     value=30
@@ -116,7 +114,7 @@ st.pyplot(fig)
 
 
 # Select recent data
-recent_df = df.tail(days)
+recent_df = df.tail(forecast_days)
 
 X = recent_df.drop(columns=["date", "close"])
 X_scaled = scaler.transform(X)
