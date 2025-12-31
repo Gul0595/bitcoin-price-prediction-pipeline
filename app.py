@@ -1,3 +1,8 @@
+import mlflow
+import mlflow.sklearn
+from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import StandardScaler
+from xgboost import XGBRegressor
 import streamlit as st
 import pandas as pd
 import joblib
@@ -29,6 +34,42 @@ def forecast_next_days(df, model, scaler, days):
 
     return future_predictions
 
+def train_model_with_mlflow(df):
+    X = df.drop(columns=["date", "close"])
+    y = df["close"]
+
+    split = int(len(df) * 0.8)
+    X_train, X_test = X.iloc[:split], X.iloc[split:]
+    y_train, y_test = y.iloc[:split], y.iloc[split:]
+
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+
+    mlflow.set_experiment("Bitcoin Price Prediction")
+
+    with mlflow.start_run():
+        model = XGBRegressor(
+            n_estimators=300,
+            learning_rate=0.05,
+            max_depth=5,
+            random_state=42
+        )
+
+        model.fit(X_train_scaled, y_train)
+
+        preds = model.predict(X_test_scaled)
+        rmse = (mean_squared_error(y_test, preds)) ** 0.5
+
+        mlflow.log_param("model", "XGBoost")
+        mlflow.log_param("n_estimators", 300)
+        mlflow.log_param("learning_rate", 0.05)
+        mlflow.log_param("max_depth", 5)
+        mlflow.log_metric("rmse", rmse)
+
+        mlflow.sklearn.log_model(model, "model")
+
+    return model, scaler, rmse
 
 # Load model & scaler
 from sklearn.preprocessing import StandardScaler
@@ -111,6 +152,15 @@ ax.set_ylabel("BTC Price (USD)")
 ax.legend()
 
 st.pyplot(fig)
+
+st.subheader("🧪 Train Model with MLflow")
+
+if st.button("Train Model & Track Experiment"):
+    with st.spinner("Training model and logging to MLflow..."):
+        model, scaler, rmse = train_model_with_mlflow(df)
+
+    st.success("Training completed successfully!")
+    st.metric("RMSE", f"{rmse:.2f}")
 
 
 # Select recent data
