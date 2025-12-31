@@ -4,6 +4,32 @@ import joblib
 import numpy as np
 import matplotlib.pyplot as plt
 
+def forecast_next_days(df, model, scaler, days):
+    future_predictions = []
+    temp_df = df.copy()
+
+    for _ in range(days):
+        # last row se features lo
+        X_last = temp_df.drop(columns=["date", "close"]).iloc[-1:]
+        X_last_scaled = scaler.transform(X_last)
+
+        # prediction
+        next_price = model.predict(X_last_scaled)[0]
+        future_predictions.append(next_price)
+
+        # next day ka row banao
+        next_row = temp_df.iloc[-1].copy()
+        next_row["close"] = next_price
+        next_row["date"] = next_row["date"] + pd.Timedelta(days=1)
+
+        temp_df = pd.concat(
+            [temp_df, next_row.to_frame().T],
+            ignore_index=True
+        )
+
+    return future_predictions
+
+
 # Load model & scaler
 from sklearn.preprocessing import StandardScaler
 from xgboost import XGBRegressor
@@ -41,8 +67,51 @@ st.set_page_config(page_title="Bitcoin Price Prediction", layout="wide")
 st.title("📈 Bitcoin Price Prediction Dashboard")
 
 # Sidebar
-st.sidebar.header("Prediction Settings")
-days = st.sidebar.slider("Number of days to visualize", 30, 180, 90)
+st.sidebar.header("User Controls")
+forecast_days = st.sidebar.slider(
+    "Kitne din ka forecast chahiye?",
+    min_value=7,
+    max_value=60,
+    value=30
+)
+
+future_prices = forecast_next_days(
+    df,
+    model,
+    scaler,
+    forecast_days
+)
+
+future_dates = pd.date_range(
+    start=df["date"].iloc[-1] + pd.Timedelta(days=1),
+    periods=forecast_days
+)
+
+st.subheader("🔮 Bitcoin Price Forecast")
+
+fig, ax = plt.subplots(figsize=(12, 5))
+
+# last 100 days ka historical
+ax.plot(
+    df["date"].tail(100),
+    df["close"].tail(100),
+    label="Historical Price"
+)
+
+# future prediction
+ax.plot(
+    future_dates,
+    future_prices,
+    label="Predicted Price",
+    linestyle="--"
+)
+
+ax.set_xlabel("Date")
+ax.set_ylabel("BTC Price (USD)")
+ax.legend()
+
+st.pyplot(fig)
+
 
 # Select recent data
 recent_df = df.tail(days)
