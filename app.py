@@ -5,8 +5,32 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Load model & scaler
-model = joblib.load("models/xgboost_btc_model.pkl")
-scaler = joblib.load("models/scaler.pkl")
+from sklearn.preprocessing import StandardScaler
+from xgboost import XGBRegressor
+
+@st.cache_resource
+def train_model():
+    df = pd.read_csv("data/processed/btc_feature_data.csv")
+    df["date"] = pd.to_datetime(df["date"])
+
+    X = df.drop(columns=["date", "close"])
+    y = df["close"]
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    model = XGBRegressor(
+        n_estimators=300,
+        learning_rate=0.05,
+        max_depth=5,
+        random_state=42
+    )
+    model.fit(X_scaled, y)
+
+    return model, scaler
+
+model, scaler = train_model()
+
 
 # Load feature data
 df = pd.read_csv("data/processed/btc_feature_data.csv")
